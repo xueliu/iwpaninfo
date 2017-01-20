@@ -11,11 +11,8 @@ IWPANINFO_LUA_LDFLAGS = $(LDFLAGS) -shared -L. -liwpaninfo -llua
 IWPANINFO_LUA_OBJ     = iwpaninfo_lua.o
 
 IWPANINFO_CLI         = iwpaninfo
-IWPANINFO_CLI_LDFLAGS = $(LDFLAGS)
-# get rid of independence os libiwpaninfo.so
-#IWPANINFO_CLI_LDFLAGS = $(LDFLAGS) -L. -liwpaninfo
-#IWPANINFO_CLI_OBJ     = iwpaninfo_cli.o
-IWPANINFO_CLI_OBJ     = iwpaninfo_cli.o iwpaninfo_utils.o iwpaninfo_lib.o iwpaninfo_nl802154.o
+IWPANINFO_CLI_LDFLAGS = $(LDFLAGS) -L. -liwpaninfo
+IWPANINFO_CLI_OBJ     = iwpaninfo_cli.o
 
 ifneq ($(filter nl802154,$(IWPANINFO_BACKENDS)),)
 	IWPANINFO_CFLAGS      += -DUSE_NL802154
