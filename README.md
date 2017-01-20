@@ -1,6 +1,10 @@
 # iwpaninfo
 Generalized 802.15.4 Information Library (iwpaninfo)
 
+This project is heavily based on
+[iwinfo](http://git.openwrt.org/?p=project/iwinfo.git;a=summary)
+[wpan-tools](https://github.com/linux-wpan/wpan-tools)
+
 ## Table of Contents
 
 - [Install](#install)
