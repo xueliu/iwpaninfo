@@ -1,0 +1,13 @@
+*.o
+/Debug/
+
+.cproject
+.project
+.settings/
+*.so
+*.vpwhistu
+*.vtg
+*.vpj
+*.vpw
+*.launch
+iwpaninfo
