@@ -502,14 +502,119 @@ static int nl802154_wait(const char *family, const char *group, int cmd)
 	return 0;
 }
 
-static int nl802154_channel2freq(int channel)
-{
-	if (channel < 11 || channel > 26)
-	{
-		return 0;
-	} else
-		return 2405 + (channel - 11) * 5;
+static float nl802154_channel2freq(int channel_page, int channel) {
+	float freq = 0;
+
+	switch (channel_page) {
+	case 0:
+		if (channel == 0) {
+			freq = 868.3;
+			break;
+		} else if (channel > 0 && channel < 11) {
+			freq = 906 + 2 * (channel - 1);
+		} else {
+			freq = 2405 + 5 * (channel - 11);
+		}
+		break;
+	case 1:
+		if (channel == 0) {
+			freq = 868.3;
+			break;
+		} else if (channel >= 1 && channel <= 10) {
+			freq = 906 + 2 * (channel - 1);
+		}
+		break;
+	case 2:
+		if (channel == 0) {
+			freq = 868.3;
+			break;
+		} else if (channel >= 1 && channel <= 10) {
+			freq = 906 + 2 * (channel - 1);
+		}
+		break;
+	case 3:
+		if (channel >= 0 && channel <= 12) {
+			freq = 2412 + 5 * channel;
+		} else if (channel == 13) {
+			freq = 2484;
+		}
+		break;
+	case 4:
+		switch (channel) {
+		case 0:
+			freq = 499.2;
+			break;
+		case 1:
+			freq = 3494.4;
+			break;
+		case 2:
+			freq = 3993.6;
+			break;
+		case 3:
+			freq = 4492.8;
+			break;
+		case 4:
+			freq = 3993.6;
+			break;
+		case 5:
+			freq = 6489.6;
+			break;
+		case 6:
+			freq = 6988.8;
+			break;
+		case 7:
+			freq = 6489.6;
+			break;
+		case 8:
+			freq = 7488.0;
+			break;
+		case 9:
+			freq = 7987.2;
+			break;
+		case 10:
+			freq = 8486.4;
+			break;
+		case 11:
+			freq = 7987.2;
+			break;
+		case 12:
+			freq = 8985.6;
+			break;
+		case 13:
+			freq = 9484.8;
+			break;
+		case 14:
+			freq = 9984.0;
+			break;
+		case 15:
+			freq = 9484.8;
+			break;
+		}
+		break;
+	case 5:
+		if (channel >= 0 && channel <= 3) {
+			freq = 780 + 2 * channel;
+		} else if (channel >= 4 && channel <= 7) {
+			freq = 780 + 2 * (channel - 4);
+		}
+		break;
+	case 6:
+		if (channel >= 0 && channel <= 7) {
+			freq = 951.2 + 0.6 * channel;
+		} else if (channel >= 8 && channel <= 9) {
+			freq = 954.4 + 0.2 * (channel - 8);
+		} else if (channel >= 10 && channel <= 21) {
+			freq = 951.1 + 0.4 * (channel - 10);
+		}
+		break;
+	default:
+		freq = 0;
+		break;
+	}
+
+	return freq;
 }
+
 
 static int nl802154_ifname2phy_cb(struct nl_msg *msg, void *arg)
 {
@@ -716,17 +821,6 @@ static int nl802154_get_channel(const char *ifname, int *buf)
 	return (*buf == 0) ? -1 : 0;
 }
 
-static int nl802154_get_frequency(const char *ifname, int *buf)
-{
-	if (!nl802154_get_channel(ifname, buf))
-	{
-		*buf = nl802154_channel2freq(*buf);
-		return 0;
-	}
-
-	return -1;
-}
-
 static int nl802154_get_txpower_cb(struct nl_msg *msg, void *arg)
 {
 	int *buf = arg;
@@ -861,6 +955,7 @@ static int nl802154_get_freqlist_cb(struct nl_msg *msg, void *arg)
 	struct iwpaninfo_freqlist_entry *e = arr->buf;
 
 	int ret;
+	int current_page;
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 
 	struct nlattr *tb_caps[NL802154_CAP_ATTR_MAX + 1];
@@ -882,6 +977,9 @@ static int nl802154_get_freqlist_cb(struct nl_msg *msg, void *arg)
 		return -EIO;
 	}
 
+	if (tb_msg[NL802154_ATTR_PAGE])
+		current_page = nla_get_u8(tb_msg[NL802154_ATTR_PAGE]);
+
 	if (tb_caps[NL802154_CAP_ATTR_CHANNELS]) {
 		int rem_pages;
 		struct nlattr *nl_pages;
@@ -892,7 +990,7 @@ static int nl802154_get_freqlist_cb(struct nl_msg *msg, void *arg)
 			nla_for_each_nested(nl_ch, nl_pages, rem_ch)
 			{
 				e->channel = nla_type(nl_ch);
-				e->mhz = nl802154_channel2freq(e->channel);
+				e->mhz = nl802154_channel2freq(current_page, e->channel);
 				e++;
 				arr->count++;
 			}
@@ -1061,6 +1159,19 @@ static int nl802154_get_page(const char *ifname, int *buf)
 	}
 
 	return *buf;
+}
+
+static int nl802154_get_frequency(const char *ifname, int *buf) {
+	int current_page = -1;
+	if (!nl802154_get_page(ifname, buf)) {
+		current_page = nl802154_get_page(ifname, buf);
+		if (!nl802154_get_channel(ifname, buf)) {
+			*buf = nl802154_channel2freq(current_page, *buf);
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 static int nl802154_get_min_be_info_cb(struct nl_msg *msg, void *arg)

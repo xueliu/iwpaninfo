@@ -37,7 +37,7 @@ struct iwpaninfo_txpwrlist_entry {
 
 struct iwpaninfo_freqlist_entry {
 	uint8_t channel;
-	uint32_t mhz;
+	float mhz;
 };
 
 struct iwpaninfo_ops {

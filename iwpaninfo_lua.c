@@ -111,7 +111,7 @@ static int iwinfo_L_freqlist(lua_State *L,
 			lua_newtable(L);
 
 			/* MHz */
-			lua_pushinteger(L, e->mhz);
+			lua_pushnumber(L, e->mhz);
 			lua_setfield(L, -2, "mhz");
 
 			/* Channel */
