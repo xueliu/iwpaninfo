@@ -226,74 +226,6 @@ err:
 	return NULL;
 }
 
-static struct nl802154_msg_conveyor * nl802154_ctl(int cmd, int flags)
-{
-	if (nl802154_init() < 0)
-		return NULL;
-
-	return nl802154_new(nls->nlctrl, cmd, flags);
-}
-
-static int nl802154_phy_idx_from_uci_path(struct uci_section *s)
-{
-	const char *opt;
-	char buf[128];
-	int idx = -1;
-	glob_t gl;
-
-	opt = uci_lookup_option_string(uci_ctx, s, "path");
-	if (!opt)
-		return -1;
-
-	snprintf(buf, sizeof(buf), "/sys/devices/%s/ieee80211/*/index", opt);  /**/
-	if (glob(buf, 0, NULL, &gl))
-		snprintf(buf, sizeof(buf), "/sys/devices/platform/%s/ieee80211/*/index", opt);  /**/
-
-	if (glob(buf, 0, NULL, &gl))
-		return -1;
-
-	if (gl.gl_pathc > 0)
-		idx = nl802154_readint(gl.gl_pathv[0]);
-
-	globfree(&gl);
-
-	return idx;
-}
-
-static int nl802154_phy_idx_from_uci_macaddr(struct uci_section *s)
-{
-	const char *opt;
-	char buf[128];
-	int i, idx = -1;
-	glob_t gl;
-
-	opt = uci_lookup_option_string(uci_ctx, s, "macaddr");
-	if (!opt)
-		return -1;
-
-	snprintf(buf, sizeof(buf), "/sys/class/ieee80211/*");	/**/
-	if (glob(buf, 0, NULL, &gl))
-		return -1;
-
-	for (i = 0; i < gl.gl_pathc; i++)
-	{
-		snprintf(buf, sizeof(buf), "%s/macaddress", gl.gl_pathv[i]);
-		if (nl802154_readstr(buf, buf, sizeof(buf)) <= 0)
-			continue;
-
-		if (fnmatch(opt, buf, FNM_CASEFOLD))
-			continue;
-
-		snprintf(buf, sizeof(buf), "%s/index", gl.gl_pathv[i]);
-		if ((idx = nl802154_readint(buf)) > -1)
-			break;
-	}
-
-	globfree(&gl);
-
-	return idx;
-}
-
 static int nl802154_phy_idx_from_uci_phy(struct uci_section *s)
 {
 	const char *opt;
@@ -303,7 +235,7 @@ static int nl802154_phy_idx_from_uci_phy(struct uci_section *s)
 	if (!opt)
 		return -1;
 
-	snprintf(buf, sizeof(buf), "/sys/class/ieee80211/%s/index", opt);
+	snprintf(buf, sizeof(buf), "/sys/class/ieee802154/%s/index", opt);
 	return nl802154_readint(buf);
 }
 
@@ -312,17 +244,11 @@ static int nl802154_phy_idx_from_uci(const char *name)
 	struct uci_section *s;
 	int idx = -1;
 
-	s = iwpaninfo_uci_get_radio(name, "mac80211");
+	s = iwpaninfo_uci_get_radio(name, "mac802154");
 	if (!s)
 		goto free;
 
-	idx = nl802154_phy_idx_from_uci_path(s);
-
-	if (idx < 0)
-		idx = nl802154_phy_idx_from_uci_macaddr(s);
-
-	if (idx < 0)
-		idx = nl802154_phy_idx_from_uci_phy(s);
+	idx = nl802154_phy_idx_from_uci_phy(s);
 
 free:
 	iwpaninfo_uci_free();
@@ -411,95 +337,6 @@ static struct nlattr ** nl802154_parse(struct nl_msg *msg)
 	          genlmsg_attrlen(gnlh, 0), NULL);
 
 	return attr;
-}
-
-
-static int nl802154_subscribe_cb(struct nl_msg *msg, void *arg)
-{
-	struct nl802154_group_conveyor *cv = arg;
-
-	struct nlattr **attr = nl802154_parse(msg);
-	struct nlattr *mgrpinfo[CTRL_ATTR_MCAST_GRP_MAX + 1];
-	struct nlattr *mgrp;
-	int mgrpidx;
-
-	if (!attr[CTRL_ATTR_MCAST_GROUPS])
-		return NL_SKIP;
-
-	nla_for_each_nested(mgrp, attr[CTRL_ATTR_MCAST_GROUPS], mgrpidx)
-	{
-		nla_parse(mgrpinfo, CTRL_ATTR_MCAST_GRP_MAX,
-		          nla_data(mgrp), nla_len(mgrp), NULL);
-
-		if (mgrpinfo[CTRL_ATTR_MCAST_GRP_ID] &&
-		    mgrpinfo[CTRL_ATTR_MCAST_GRP_NAME] &&
-		    !strncmp(nla_data(mgrpinfo[CTRL_ATTR_MCAST_GRP_NAME]),
-		             cv->name, nla_len(mgrpinfo[CTRL_ATTR_MCAST_GRP_NAME])))
-		{
-			cv->id = nla_get_u32(mgrpinfo[CTRL_ATTR_MCAST_GRP_ID]);
-			break;
-		}
-	}
-
-	return NL_SKIP;
-}
-
-static int nl802154_subscribe(const char *family, const char *group)
-{
-	struct nl802154_group_conveyor cv = { .name = group, .id = -ENOENT };
-	struct nl802154_msg_conveyor *req;
-
-	req = nl802154_ctl(CTRL_CMD_GETFAMILY, 0);
-	if (req)
-	{
-		NLA_PUT_STRING(req->msg, CTRL_ATTR_FAMILY_NAME, family);
-		nl802154_send(req, nl802154_subscribe_cb, &cv);
-
-nla_put_failure:
-		nl802154_free(req);
-	}
-
-	return nl_socket_add_membership(nls->nl_sock, cv.id);
-}
-
-static int nl802154_wait_cb(struct nl_msg *msg, void *arg)
-{
-	struct nl802154_event_conveyor *cv = arg;
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-
-	if (gnlh->cmd == cv->wait)
-		cv->recv = gnlh->cmd;
-
-	return NL_SKIP;
-}
-
-static int nl802154_wait_seq_check(struct nl_msg *msg, void *arg)
-{
-	return NL_OK;
-}
-
-static int nl802154_wait(const char *family, const char *group, int cmd)
-{
-	struct nl802154_event_conveyor cv = { .wait = cmd };
-	struct nl_cb *cb;
-
-	if (nl802154_subscribe(family, group))
-		return -ENOENT;
-
-	cb = nl_cb_alloc(NL_CB_DEFAULT);
-
- 	if (!cb)
-		return -ENOMEM;
-
-	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, nl802154_wait_seq_check, NULL);
-	nl_cb_set(cb, NL_CB_VALID,     NL_CB_CUSTOM, nl802154_wait_cb,        &cv );
-
-	while (!cv.recv)
-		nl_recvmsgs(nls->nl_sock, cb);
-
-	nl_cb_put(cb);
-
-	return 0;
 }
 
 static float nl802154_channel2freq(int channel_page, int channel) {
@@ -731,57 +568,6 @@ static int nl802154_get_mode(const char *ifname, int *buf)
 	}
 
 	return (*buf == IWPANINFO_OPMODE_UNKNOWN) ? -1 : 0;
-}
-
-static char * nl802154_ifadd(const char *ifname)
-{
-	char *rv = NULL, path[PATH_MAX];
-	static char nif[IFNAMSIZ] = { 0 };
-	struct nl802154_msg_conveyor *req;
-	FILE *sysfs;
-
-	req = nl802154_msg(ifname, NL802154_CMD_NEW_INTERFACE, 0);
-	if (req)
-	{
-		snprintf(nif, sizeof(nif), "tmp.%s", ifname);
-
-		NLA_PUT_STRING(req->msg, NL802154_ATTR_IFNAME, nif);
-		NLA_PUT_U32(req->msg, NL802154_ATTR_IFTYPE, NL802154_IFTYPE_NODE);
-
-		nl802154_send(req, NULL, NULL);
-
-		snprintf(path, sizeof(path) - 1,
-		         "/proc/sys/net/ipv6/conf/%s/disable_ipv6", nif);
-
-		if ((sysfs = fopen(path, "w")) != NULL)
-		{
-			fwrite("0\n", 1, 2, sysfs);
-			fclose(sysfs);
-		}
-
-		rv = nif;
-
-	nla_put_failure:
-		nl802154_free(req);
-	}
-
-	return rv;
-}
-
-static void nl802154_ifdel(const char *ifname)
-{
-	struct nl802154_msg_conveyor *req;
-
-	req = nl802154_msg(ifname, NL802154_CMD_DEL_INTERFACE, 0);
-	if (req)
-	{
-		NLA_PUT_STRING(req->msg, NL802154_ATTR_IFNAME, ifname);
-
-		nl802154_send(req, NULL, NULL);
-
-	nla_put_failure:
-		nl802154_free(req);
-	}
 }
 
 static int nl802154_probe(const char *ifname)
