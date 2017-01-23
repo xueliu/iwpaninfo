@@ -154,7 +154,7 @@ static const luaL_reg R_nl802154[] = {
 	LUA_REG(nl802154, txpower),
 	LUA_REG(nl802154, mode),
 	LUA_REG(nl802154, txpwrlist),
-LUA_REG(nl802154, freqlist),
+	LUA_REG(nl802154, freqlist),
 	LUA_REG(nl802154, phyname),
 	LUA_REG(nl802154, panid),
 	LUA_REG(nl802154, short_address),
