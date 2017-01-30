@@ -16,8 +16,8 @@ IWPANINFO_CLI_OBJ     = iwpaninfo_cli.o
 
 ifneq ($(filter nl802154,$(IWPANINFO_BACKENDS)),)
 	IWPANINFO_CFLAGS      += -DUSE_NL802154
-	IWPANINFO_CLI_LDFLAGS += -lnl-tiny
-	IWPANINFO_LIB_LDFLAGS += -lnl-tiny
+	IWPANINFO_CLI_LDFLAGS += -lnl -lnl-genl
+	IWPANINFO_LIB_LDFLAGS += -lnl -lnl-genl
 	IWPANINFO_LIB_OBJ     += iwpaninfo_nl802154.o
 endif
 
