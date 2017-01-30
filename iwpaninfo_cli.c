@@ -465,7 +465,6 @@ int main(int argc, char **argv)
 		fprintf(stderr,
 			"Usage:\n"
 			"	iwpaninfo <device> info\n"
-			"	iwpaninfo <device> scan\n"
 			"	iwpaninfo <device> txpowerlist\n"
 			"	iwpaninfo <device> freqlist\n"
 			"	iwpaninfo <backend> phyname <section>\n"
