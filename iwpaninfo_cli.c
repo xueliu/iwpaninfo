@@ -239,16 +239,16 @@ static char* print_cca_opt(const struct iwpaninfo_ops *iwpan, const char *ifname
 	if (-1 == iwpan->cca_opt(ifname, &cca_opt))
 		snprintf(buf, sizeof(buf), "unknown");
 	else if (NL802154_CCA_OPT_ENERGY_CARRIER_AND == cca_opt)
-		snprintf(buf, sizeof(buf), "%s", "and");
+		snprintf(buf, sizeof(buf), "%s", "logical operator is 'and' ");
 	else if (NL802154_CCA_OPT_ENERGY_CARRIER_OR == cca_opt)
-		snprintf(buf, sizeof(buf), "%s", "or");
+		snprintf(buf, sizeof(buf), "%s", "logical operator is 'or' ");
 	return buf;
 }
 
 static char* print_cca_mode(const struct iwpaninfo_ops *iwpan, const char *ifname)
 {
 	int cca_mode;
-	static char buf[32];
+	static char buf[64];
 
 	if (-1 == iwpan->cca_mode(ifname, &cca_mode))
 		snprintf(buf, sizeof(buf), "unknown");
@@ -256,10 +256,8 @@ static char* print_cca_mode(const struct iwpaninfo_ops *iwpan, const char *ifnam
 		snprintf(buf, sizeof(buf), "%d (Energy above threshold)", cca_mode);
 	else if (NL802154_CCA_CARRIER == cca_mode)
 		snprintf(buf, sizeof(buf), "%d (Carrier sense only)", cca_mode);
-	else if (NL802154_CCA_ENERGY_CARRIER == cca_mode) {
+	else if (NL802154_CCA_ENERGY_CARRIER == cca_mode)
 		snprintf(buf, sizeof(buf), "%d (Carrier sense with energy above threshold)", cca_mode);
-		printf("\tlogical operator is '%s' \n", print_cca_opt(iwpan, ifname));
-	}
 	return buf;
 }
 
@@ -281,6 +279,7 @@ static void print_info(const struct iwpaninfo_ops *iw, const char *ifname)
 	printf("\tFrame Retry: %s\n", print_frame_retry(iw, ifname));
 	printf("\tLBT Mode: %s\n", print_lbt_mode(iw, ifname));
 	printf("\tCCA Mode: %s\n", print_cca_mode(iw, ifname));
+	printf("\tCCA OPT: %s\n", print_cca_opt(iw, ifname));
 }
 
 static void print_txpwrlist(const struct iwpaninfo_ops *iw, const char *ifname)
