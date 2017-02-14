@@ -1213,6 +1213,37 @@ static int nl802154_get_cca_mode(const char *ifname, int *buf)
 	return *buf;
 }
 
+static int nl802154_get_cca_opt_info_cb(struct nl_msg *msg, void *arg)
+{
+	int *cca_mode = arg;
+	struct nlattr **tb = nl802154_parse(msg);
+
+	if (tb[NL802154_ATTR_CCA_OPT])
+		*cca_mode = nla_get_u8(tb[NL802154_ATTR_CCA_OPT]);
+
+	return NL_SKIP;
+}
+
+static int nl802154_get_cca_opt(const char *ifname, int *buf)
+{
+	char *res;
+	struct nl802154_msg_conveyor *req;
+
+	/* try to find cca opt from interface info */
+	res = nl802154_phy2ifname(ifname);
+
+	req = nl802154_msg(res ? res : ifname, NL802154_CMD_GET_WPAN_PHY, 0);
+	*buf = -1;
+
+	if (req)
+	{
+		nl802154_send(req, nl802154_get_cca_opt_info_cb, buf);
+		nl802154_free(req);
+	}
+
+	return *buf;
+}
+
 const struct iwpaninfo_ops nl802154_ops = {
 	.name				= "nl802154",
 	.probe				= nl802154_probe,
@@ -1235,5 +1266,6 @@ const struct iwpaninfo_ops nl802154_ops = {
 	.frame_retry		= nl802154_get_frame_retry,
 	.lbt_mode			= nl802154_get_lbt_mode,
 	.cca_mode 			= nl802154_get_cca_mode,
+	.cca_opt			= nl802154_get_cca_opt,
 	.close				= nl802154_close
 };

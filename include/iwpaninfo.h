@@ -67,6 +67,7 @@ struct iwpaninfo_ops {
 	int (*frame_retry)(const char *, int *);
 	int (*lbt_mode)(const char *, int *);
 	int (*cca_mode)(const char *, int *);
+	int (*cca_opt)(const char *, int *);
 	void (*close)(void);
 };
 

@@ -177,6 +177,7 @@ LUA_WRAP_INT_OP(nl802154, csma_backoff)
 LUA_WRAP_INT_OP(nl802154, frame_retry)
 LUA_WRAP_INT_OP(nl802154, lbt_mode)
 LUA_WRAP_INT_OP(nl802154, cca_mode)
+LUA_WRAP_INT_OP(nl802154, cca_opt)
 #endif
 
 #ifdef USE_NL802154
@@ -200,6 +201,7 @@ static const luaL_reg R_nl802154[] = {
 	LUA_REG(nl802154, frame_retry),
 	LUA_REG(nl802154, lbt_mode),
 	LUA_REG(nl802154, cca_mode),
+	LUA_REG(nl802154, cca_opt),
 	{ NULL, NULL }
 };
 #endif

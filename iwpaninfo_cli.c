@@ -24,6 +24,7 @@
 #include <inttypes.h>
 
 #include "iwpaninfo.h"
+#include "api/nl802154.h"
 
 static char * format_channel(int ch)
 {
@@ -230,16 +231,35 @@ static char* print_lbt_mode(const struct iwpaninfo_ops *iwpan, const char *ifnam
 	return buf;
 }
 
+static char* print_cca_opt(const struct iwpaninfo_ops *iwpan, const char *ifname)
+{
+	int cca_opt;
+	static char buf[32];
+
+	if (-1 == iwpan->cca_opt(ifname, &cca_opt))
+		snprintf(buf, sizeof(buf), "unknown");
+	else if (NL802154_CCA_OPT_ENERGY_CARRIER_AND == cca_opt)
+		snprintf(buf, sizeof(buf), "%s", "and");
+	else if (NL802154_CCA_OPT_ENERGY_CARRIER_OR == cca_opt)
+		snprintf(buf, sizeof(buf), "%s", "or");
+	return buf;
+}
+
 static char* print_cca_mode(const struct iwpaninfo_ops *iwpan, const char *ifname)
 {
 	int cca_mode;
-	static char buf[8];
+	static char buf[32];
 
 	if (-1 == iwpan->cca_mode(ifname, &cca_mode))
 		snprintf(buf, sizeof(buf), "unknown");
-	else
-		snprintf(buf, sizeof(buf), "%d", cca_mode);
-
+	else if (NL802154_CCA_ENERGY == cca_mode)
+		snprintf(buf, sizeof(buf), "%d (Energy above threshold)", cca_mode);
+	else if (NL802154_CCA_CARRIER == cca_mode)
+		snprintf(buf, sizeof(buf), "%d (Carrier sense only)", cca_mode);
+	else if (NL802154_CCA_ENERGY_CARRIER == cca_mode) {
+		snprintf(buf, sizeof(buf), "%d (Carrier sense with energy above threshold)", cca_mode);
+		printf("\tlogical operator is '%s' \n", print_cca_opt(iwpan, ifname));
+	}
 	return buf;
 }
 
