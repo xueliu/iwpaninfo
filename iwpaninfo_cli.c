@@ -54,7 +54,7 @@ static char * format_txpower(int pwr)
 {
 	static char buf[10];
 
-	if (pwr < 0)
+	if (pwr < -99)
 		snprintf(buf, sizeof(buf), "unknown");
 	else
 		snprintf(buf, sizeof(buf), "%d dBm", pwr);
@@ -98,7 +98,7 @@ static char* print_txpower(const struct iwpaninfo_ops *iwpan, const char *ifname
 	int pwr = 0;
 
 	if (iwpan->txpower(ifname, &pwr))
-		pwr = -1;
+		pwr = -100;
 
 	return format_txpower(pwr);
 }
