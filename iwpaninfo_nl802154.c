@@ -23,6 +23,7 @@
 #include <glob.h>
 #include <fnmatch.h>
 #include <stdarg.h>
+#include <limits.h>
 
 #include "iwpaninfo_nl802154.h"
 #include "nl_extras.h"
@@ -30,11 +31,6 @@
 #define min(x, y) ((x) < (y)) ? (x) : (y)
 
 #define BIT(x) (1ULL<<(x))
-
-#define DBM_TO_MBM(gain)						\
-	((int)(((float)gain) * 100))
-#define MBM_TO_DBM(gain)						\
-	((float)(gain) / 100)
 
 static struct nl802154_state *nls = NULL;
 
@@ -613,7 +609,7 @@ static int nl802154_get_txpower_cb(struct nl_msg *msg, void *arg)
 	struct nlattr **tb = nl802154_parse(msg);
 
 	if (tb[NL802154_ATTR_TX_POWER])
-		*buf = iwpaninfo_mbm2dbm(nla_get_u32(tb[NL802154_ATTR_TX_POWER]));
+		*buf = nla_get_u32(tb[NL802154_ATTR_TX_POWER]);
 
 	return NL_SKIP;
 }
@@ -628,14 +624,12 @@ static int nl802154_get_txpower(const char *ifname, int *buf)
 
 	if (req)
 	{
-		*buf = 0;
+		*buf = INT_MIN;
 		nl802154_send(req, nl802154_get_txpower_cb, buf);
 		nl802154_free(req);
-		if (*buf)
-			return 0;
 	}
 
-	return -1;
+	return (*buf == INT_MIN) ? -1 : 0;
 }
 
 static int nl802154_get_phyname(const char *ifname, char *buf)

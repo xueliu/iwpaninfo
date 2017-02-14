@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <glob.h>
 #include <inttypes.h>
+#include <limits.h>
 
 #include "iwpaninfo.h"
 #include "api/nl802154.h"
@@ -54,10 +55,10 @@ static char * format_txpower(int pwr)
 {
 	static char buf[10];
 
-	if (pwr < -99)
+	if (INT_MIN == pwr)
 		snprintf(buf, sizeof(buf), "unknown");
 	else
-		snprintf(buf, sizeof(buf), "%d dBm", pwr);
+		snprintf(buf, sizeof(buf), "%.3g dBm", MBM_TO_DBM(pwr));
 
 	return buf;
 }
@@ -98,7 +99,7 @@ static char* print_txpower(const struct iwpaninfo_ops *iwpan, const char *ifname
 	int pwr = 0;
 
 	if (iwpan->txpower(ifname, &pwr))
-		pwr = -100;
+		pwr = INT_MIN;
 
 	return format_txpower(pwr);
 }

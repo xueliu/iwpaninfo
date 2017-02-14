@@ -21,6 +21,11 @@
 
 #define IWPANINFO_BUFSIZE	32 * 1024
 
+#define DBM_TO_MBM(gain)						\
+	((int)(((float)gain) * 100))
+#define MBM_TO_DBM(gain)						\
+	((float)(gain) / 100)
+
 enum iwpaninfo_opmode {
 	IWPANINFO_OPMODE_NODE		= 0,
 	IWPANINFO_OPMODE_MONITOR	= 1,
