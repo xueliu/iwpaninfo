@@ -91,6 +91,38 @@ static int iwinfo_L_txpwrlist(lua_State *L, int (*func)(const char *, char *, in
 	return 0;
 }
 
+/* Wrapper for CCA ED level list */
+static int iwinfo_L_cca_ed_lvl_list(lua_State *L, int (*func)(const char *, char *, int *))
+{
+	int i, x, len;
+	char rv[IWPANINFO_BUFSIZE];
+	const char *ifname = luaL_checkstring(L, 1);
+	struct iwpaninfo_cca_ed_lvl_list_entry *e;
+
+	memset(rv, 0, sizeof(rv));
+
+	if (!(*func)(ifname, rv, &len))
+	{
+		lua_newtable(L);
+
+		for (i = 0, x = 1; i < len; i += sizeof(struct iwpaninfo_cca_ed_lvl_list_entry), x++)
+		{
+			e = (struct iwpaninfo_cca_ed_lvl_list_entry *) &rv[i];
+
+			lua_newtable(L);
+
+			lua_pushnumber(L, e->dbm);
+			lua_setfield(L, -2, "dbm");
+
+			lua_rawseti(L, -2, x);
+		}
+
+		return 1;
+	}
+
+	return 0;
+}
+
 /* Wrapper for frequency list */
 static int iwinfo_L_freqlist(lua_State *L,
 		int (*func)(const char *, char *, int *)) {
@@ -133,6 +165,7 @@ LUA_WRAP_INT_OP(nl802154, txpower)
 LUA_WRAP_STRING_OP(nl802154, phyname)
 LUA_WRAP_STRING_OP(nl802154, mode)
 LUA_WRAP_STRUCT_OP(nl802154, txpwrlist)
+LUA_WRAP_STRUCT_OP(nl802154, cca_ed_lvl_list)
 LUA_WRAP_STRUCT_OP(nl802154, freqlist)
 LUA_WRAP_INT_OP(nl802154, panid)
 LUA_WRAP_INT_OP(nl802154, short_address)
@@ -154,6 +187,7 @@ static const luaL_reg R_nl802154[] = {
 	LUA_REG(nl802154, txpower),
 	LUA_REG(nl802154, mode),
 	LUA_REG(nl802154, txpwrlist),
+	LUA_REG(nl802154, cca_ed_lvl_list),
 	LUA_REG(nl802154, freqlist),
 	LUA_REG(nl802154, phyname),
 	LUA_REG(nl802154, panid),

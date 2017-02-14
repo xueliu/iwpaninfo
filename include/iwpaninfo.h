@@ -35,6 +35,10 @@ struct iwpaninfo_txpwrlist_entry {
 //	float mw;
 };
 
+struct iwpaninfo_cca_ed_lvl_list_entry {
+	float dbm;
+};
+
 struct iwpaninfo_freqlist_entry {
 	uint8_t channel;
 	float mhz;
@@ -51,6 +55,7 @@ struct iwpaninfo_ops {
 	int (*phyname)(const char *, char *);
 	int (*txpwrlist)(const char *, char *, int *);
 	int (*freqlist)(const char *, char *, int *);
+	int (*cca_ed_lvl_list)(const char *, char *, int *);
 	int (*lookup_phy)(const char *, char *);
 	int (*panid)(const char *, int *);
 	int (*short_address)(const char *, int *);

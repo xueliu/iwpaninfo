@@ -728,6 +728,74 @@ static int nl802154_get_txpwrlist(const char *ifname, char *buf, int *len)
 
 	if (arr.count > 0)
 	{
+		*len = arr.count * sizeof(struct iwpaninfo_cca_ed_lvl_list_entry);
+		return 0;
+	}
+
+	return -1;
+}
+
+static int nl802154_get_cca_ed_lvl_cb(struct nl_msg *msg, void *arg)
+{
+	int ret;
+
+	struct nl802154_array_buf *arr = arg;
+	struct iwpaninfo_cca_ed_lvl_list_entry *e = arr->buf;
+
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+
+	struct nlattr *tb_caps[NL802154_CAP_ATTR_MAX + 1];
+	struct nlattr *tb_msg[NL802154_ATTR_MAX + 1];
+
+	static struct nla_policy caps_policy[NL802154_CAP_ATTR_MAX + 1] = {
+		[NL802154_CAP_ATTR_CCA_ED_LEVELS]		= { .type = NLA_NESTED },
+	};
+
+	nla_parse(tb_msg, NL802154_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	ret = nla_parse_nested(tb_caps, NL802154_CAP_ATTR_MAX,
+			tb_msg[NL802154_ATTR_WPAN_PHY_CAPS],
+			       caps_policy);
+
+	if (ret) {
+		printf("failed to parse caps\n");
+		return -EIO;
+	}
+
+	if (tb_caps[NL802154_CAP_ATTR_CCA_ED_LEVELS]) {
+		int rem_cca_ed_lvls;
+		struct nlattr *nl_cca_ed_lvls;
+
+		nla_for_each_nested(nl_cca_ed_lvls, tb_caps[NL802154_CAP_ATTR_CCA_ED_LEVELS], rem_cca_ed_lvls) {
+			e->dbm = MBM_TO_DBM(nla_get_s32(nl_cca_ed_lvls));
+			e++;
+			arr->count++;
+		}
+	}
+
+	return NL_SKIP;
+}
+
+
+static int nl802154_get_cca_ed_lvl_list(const char *ifname, char *buf, int *len)
+{
+	char* res;
+	struct nl802154_msg_conveyor *req;
+	struct nl802154_array_buf arr = { .buf = buf, .count = 0 };
+
+	/* try to find CCA ED level list from phy info */
+	res = nl802154_phy2ifname(ifname);
+
+	req = nl802154_msg(res ? res : ifname, NL802154_CMD_GET_WPAN_PHY, 0);
+	if (req)
+	{
+		nl802154_send(req, nl802154_get_cca_ed_lvl_cb, &arr);
+		nl802154_free(req);
+	}
+
+	if (arr.count > 0)
+	{
 		*len = arr.count * sizeof(struct iwpaninfo_txpwrlist_entry);
 		return 0;
 	}
@@ -1155,6 +1223,7 @@ const struct iwpaninfo_ops nl802154_ops = {
 	.phyname			= nl802154_get_phyname,
 	.txpwrlist			= nl802154_get_txpwrlist,
 	.freqlist			= nl802154_get_freqlist,
+	.cca_ed_lvl_list	= nl802154_get_cca_ed_lvl_list,
 	.lookup_phy			= nl802154_lookup_phyname,
 	.panid				= nl802154_get_panid,
 	.short_address		= nl802154_get_short_address,

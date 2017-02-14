@@ -283,6 +283,26 @@ static void print_txpwrlist(const struct iwpaninfo_ops *iw, const char *ifname)
 	}
 }
 
+static void print_cca_ed_lvl_list(const struct iwpaninfo_ops *iw, const char *ifname)
+{
+	int len, i;
+	char buf[IWPANINFO_BUFSIZE];
+	struct iwpaninfo_cca_ed_lvl_list_entry *e;
+
+	if (iw->cca_ed_lvl_list(ifname, buf, &len) || len <= 0)
+	{
+		printf("No CCA ED level information available\n");
+		return;
+	}
+
+	for (i = 0; i < len; i += sizeof(struct iwpaninfo_cca_ed_lvl_list_entry))
+	{
+		e = (struct iwpaninfo_cca_ed_lvl_list_entry *) &buf[i];
+
+		printf("%.3g dBm \n", e->dbm);
+	}
+}
+
 static void print_freq_handler(int channel_page, int channel) {
 	float freq = 0;
 
@@ -467,6 +487,7 @@ int main(int argc, char **argv)
 			"	iwpaninfo <device> info\n"
 			"	iwpaninfo <device> txpowerlist\n"
 			"	iwpaninfo <device> freqlist\n"
+			"	iwpaninfo <device> ccaedlvllist\n"
 			"	iwpaninfo <backend> phyname <section>\n"
 		);
 
@@ -543,6 +564,9 @@ int main(int argc, char **argv)
 					break;
 				case 'f':
 					print_freqlist(iwpan, argv[1]);
+					break;
+				case 'c':
+					print_cca_ed_lvl_list(iwpan, argv[1]);
 					break;
 				default:
 					fprintf(stderr, "Unknown command: %s\n", argv[i]);
